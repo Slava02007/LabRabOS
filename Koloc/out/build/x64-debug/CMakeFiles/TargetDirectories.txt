@@ -1,0 +1,5 @@
+D:/Kurs2/ОС/Теория/Коллоквиум/Koloc/out/build/x64-debug/CMakeFiles/edit_cache.dir
+D:/Kurs2/ОС/Теория/Коллоквиум/Koloc/out/build/x64-debug/CMakeFiles/rebuild_cache.dir
+D:/Kurs2/ОС/Теория/Коллоквиум/Koloc/out/build/x64-debug/Koloc/CMakeFiles/Koloc.dir
+D:/Kurs2/ОС/Теория/Коллоквиум/Koloc/out/build/x64-debug/Koloc/CMakeFiles/edit_cache.dir
+D:/Kurs2/ОС/Теория/Коллоквиум/Koloc/out/build/x64-debug/Koloc/CMakeFiles/rebuild_cache.dir
