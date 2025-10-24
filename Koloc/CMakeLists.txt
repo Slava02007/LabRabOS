@@ -1,15 +1,49 @@
-﻿# CMakeList.txt: файл проекта CMake верхнего уровня; проведите глобальную конфигурацию
-# и включите сюда подпроекты.
-#
-cmake_minimum_required (VERSION 3.8)
+﻿cmake_minimum_required(VERSION 3.16)
+project(KolocProject)
 
-# Включение горячей перезагрузки для компиляторов MSVC, если поддерживается.
-if (POLICY CMP0141)
-  cmake_policy(SET CMP0141 NEW)
-  set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
-endif()
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project ("Koloc")
+# Пути к исходникам (если все файлы рядом с CMakeLists.txt)
+set(SOURCES
+    main.cpp
+    Koloc.cpp
+)
 
-# Включите подпроекты.
-add_subdirectory ("Koloc")
+# ------------------------------
+# Основное приложение
+# ------------------------------
+add_executable(KolocApp ${SOURCES})
+target_include_directories(KolocApp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+# ------------------------------
+# GoogleTest (через FetchContent)
+# ------------------------------
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/refs/tags/v1.15.2.zip
+)
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
+# ------------------------------
+# Unit-тесты
+# ------------------------------
+add_executable(KolocTests tests.cpp Koloc.cpp)
+target_include_directories(KolocTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(KolocTests GTest::gtest GTest::gtest_main)
+
+include(GoogleTest)
+enable_testing()
+gtest_discover_tests(KolocTests)
+
+# ------------------------------
+# Красивый вывод бинарников
+# ------------------------------
+set_target_properties(KolocApp PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
+set_target_properties(KolocTests PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
