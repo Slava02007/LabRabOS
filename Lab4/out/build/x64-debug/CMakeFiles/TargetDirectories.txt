@@ -1,0 +1,5 @@
+D:/Kurs2/ОС/Lab4/out/build/x64-debug/CMakeFiles/edit_cache.dir
+D:/Kurs2/ОС/Lab4/out/build/x64-debug/CMakeFiles/rebuild_cache.dir
+D:/Kurs2/ОС/Lab4/out/build/x64-debug/Lab4/CMakeFiles/Lab4.dir
+D:/Kurs2/ОС/Lab4/out/build/x64-debug/Lab4/CMakeFiles/edit_cache.dir
+D:/Kurs2/ОС/Lab4/out/build/x64-debug/Lab4/CMakeFiles/rebuild_cache.dir
