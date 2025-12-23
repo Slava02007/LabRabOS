@@ -1,0 +1,4 @@
+D:/Kurs2/ОС/Lab5/out/build/x64-debug/CMakeFiles/Server.dir
+D:/Kurs2/ОС/Lab5/out/build/x64-debug/CMakeFiles/Client.dir
+D:/Kurs2/ОС/Lab5/out/build/x64-debug/CMakeFiles/edit_cache.dir
+D:/Kurs2/ОС/Lab5/out/build/x64-debug/CMakeFiles/rebuild_cache.dir
