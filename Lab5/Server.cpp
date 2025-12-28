@@ -39,6 +39,29 @@ int main() {
     createBinaryFile(filename);
     printFile(filename);
 
-    
+    string pipeName = "\\\\.\\pipe\\WorkPipe";
+    HANDLE hPipe = CreateNamedPipeA(
+        pipeName.c_str(),
+        PIPE_ACCESS_DUPLEX,
+        PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+        1, sizeof(Request), sizeof(Request), 0, NULL);
+
+    if (hPipe == INVALID_HANDLE_VALUE) {
+        cerr << "Pipe creation failed. Error: " << GetLastError() << endl;
+        return 1;
+    }
+
+    STARTUPINFOA si = { sizeof(si) };
+    PROCESS_INFORMATION pi;
+    char cmd[] = "client.exe";
+
+    if (!CreateProcessA(NULL, cmd, NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
+        cerr << "Client launch failed. Error: " << GetLastError() << endl;
+    }
+
+    cout << "Waiting for client connection..." << endl;
+    ConnectNamedPipe(hPipe, NULL);
+    cout << "Client connected." << endl;
+
     return 0;
 }
