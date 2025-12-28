@@ -62,6 +62,39 @@ int main() {
     cout << "Waiting for client connection..." << endl;
     ConnectNamedPipe(hPipe, NULL);
     cout << "Client connected." << endl;
+    while (true) {
+        Request req;
+        DWORD bytesRead;
+        if (!ReadFile(hPipe, &req, sizeof(Request), &bytesRead, NULL)) break;
 
+        if (req.op == EXIT) break;
+
+        fstream file(filename, ios::binary | ios::in | ios::out);
+        employee emp;
+        bool found = false;
+        streampos pos;
+
+        while (file.read((char*)&emp, sizeof(employee))) {
+            if (emp.num == req.id) {
+                req.data = emp;
+                pos = (int)file.tellg() - sizeof(employee);
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) req.id = -1; 
+
+        WriteFile(hPipe, &req, sizeof(Request), &bytesRead, NULL);
+
+        if (found && req.op == MODIFY) {
+            ReadFile(hPipe, &req, sizeof(Request), &bytesRead, NULL);
+            file.clear();
+            file.seekp(pos);
+            file.write((char*)&req.data, sizeof(employee));
+            cout << "Record " << req.id << " was updated." << endl;
+        }
+        file.close();
+    }
     return 0;
 }
