@@ -96,5 +96,15 @@ int main() {
         }
         file.close();
     }
+
+    cout << "\nClient disconnected. Final file content:" << endl;
+    printFile(filename);
+
+    CloseHandle(hPipe);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+
+    cout << "\nServer finished. Press any key to close..." << endl;
+    system("pause");
     return 0;
 }
