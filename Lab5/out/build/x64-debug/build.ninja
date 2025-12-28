@@ -112,6 +112,42 @@ build Client.exe: CXX_EXECUTABLE_LINKER__Client_Debug CMakeFiles\Client.dir\Clie
   TARGET_IMPLIB = Client.lib
   TARGET_PDB = Client.pdb
 
+# =============================================================================
+# Object build statements for EXECUTABLE target Tests
+
+
+#############################################
+# Order-only phony target for Tests
+
+build cmake_object_order_depends_target_Tests: phony || .
+
+build CMakeFiles\Tests.dir\Tests.cpp.obj: CXX_COMPILER__Tests_unscanned_Debug D$:\Kurs2\ОС\Lab5\Tests.cpp || cmake_object_order_depends_target_Tests
+  FLAGS = /DWIN32 /D_WINDOWS /W3 /GR /EHsc /MDd /Ob0 /Od /RTC1 -std:c++17
+  OBJECT_DIR = CMakeFiles\Tests.dir
+  OBJECT_FILE_DIR = CMakeFiles\Tests.dir
+  TARGET_COMPILE_PDB = CMakeFiles\Tests.dir\
+  TARGET_PDB = Tests.pdb
+
+
+# =============================================================================
+# Link build statements for EXECUTABLE target Tests
+
+
+#############################################
+# Link the executable Tests.exe
+
+build Tests.exe: CXX_EXECUTABLE_LINKER__Tests_Debug CMakeFiles\Tests.dir\Tests.cpp.obj
+  FLAGS = /DWIN32 /D_WINDOWS /W3 /GR /EHsc /MDd /Ob0 /Od /RTC1
+  LINK_FLAGS = /machine:x64 /debug /INCREMENTAL /subsystem:console
+  LINK_LIBRARIES = kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib
+  OBJECT_DIR = CMakeFiles\Tests.dir
+  POST_BUILD = cd .
+  PRE_LINK = cd .
+  TARGET_COMPILE_PDB = CMakeFiles\Tests.dir\
+  TARGET_FILE = Tests.exe
+  TARGET_IMPLIB = Tests.lib
+  TARGET_PDB = Tests.pdb
+
 
 #############################################
 # Utility command for edit_cache
@@ -142,6 +178,8 @@ build Client: phony Client.exe
 
 build Server: phony Server.exe
 
+build Tests: phony Tests.exe
+
 # =============================================================================
 # Folder targets.
 
@@ -150,7 +188,7 @@ build Server: phony Server.exe
 #############################################
 # Folder: D:/Kurs2/ОС/Lab5/out/build/x64-debug
 
-build all: phony Server.exe Client.exe
+build all: phony Server.exe Client.exe Tests.exe
 
 # =============================================================================
 # Built-in targets
