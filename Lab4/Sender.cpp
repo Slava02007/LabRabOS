@@ -2,102 +2,67 @@
 #include <fstream>
 #include <string>
 #include <windows.h>
+#include "Message.h"
 
 using namespace std;
-
-struct Message {
-    char text[21];
-};
 
 int main(int argc, char* argv[]) {
     setlocale(LC_ALL, "Russian");
 
-    if (argc < 3) {
-        cerr << "Использование: Sender.exe <имя_файла> <номер_процесса>\n";
-        return 1;
-    }
+    if (argc < 3) return 1;
+    string filename = argv[1];
+    int id = stoi(argv[2]);
 
-    string binfile = argv[1];
-    int senderId = stoi(argv[2]);
+    HANDLE hMutex = OpenMutex(MUTEX_ALL_ACCESS, FALSE, "FileMutex");
+    HANDLE hFull = OpenSemaphore(SEMAPHORE_ALL_ACCESS, FALSE, "MessagesFull");
+    HANDLE hEmpty = OpenSemaphore(SEMAPHORE_ALL_ACCESS, FALSE, "MessagesEmpty");
 
-    
-    string eventName = "SenderReady_" + to_string(senderId);
+    string eventName = "ReadyEvent" + to_string(id);
+    HANDLE hReady = OpenEvent(EVENT_ALL_ACCESS, FALSE, eventName.c_str());
+    SetEvent(hReady);
 
-    
-    HANDLE readyEvent = OpenEventA(EVENT_MODIFY_STATE, FALSE, eventName.c_str());
-    if (!readyEvent) {
-        cerr << "Ошибка открытия события " << eventName << "!\n";
-        return 1;
-    }
-
-   
-    fstream file(binfile, ios::binary | ios::in | ios::out);
-    if (!file) {
-        cerr << "Ошибка открытия бинарного файла!\n";
-        CloseHandle(readyEvent);
-        return 1;
-    }
-
-    
-    SetEvent(readyEvent);
-    cout << "Sender #" << senderId << " готов к работе.\n";
+    cout << "--- Sender #" << id << " готов к работе ---\n";
 
     while (true) {
-        cout << "\nКоманды:\n1 — отправить сообщение\n2 — выход\n";
+        cout << "\n1 - Отправить сообщение\n2 - Прекратить работу\n> ";
         int cmd;
         cin >> cmd;
 
-        if (cmd == 2) {
-            cout << "Завершение работы Sender #" << senderId << endl;
-            break;
-        }
-        else if (cmd == 1) {
+        if (cmd == 2) break;
+        if (cmd == 1) {
             cout << "Введите сообщение (до 20 символов): ";
             string text;
-            cin.ignore();
-            getline(cin, text);
+            cin >> text;
+            if (text.length() > 20) text = text.substr(0, 20);
 
-            if (text.length() > 20) {
-                cout << "Сообщение слишком длинное! Будет обрезано до 20 символов.\n";
-                text = text.substr(0, 20);
-            }
+            cout << "Ожидание свободного места в файле..." << endl;
+            WaitForSingleObject(hEmpty, INFINITE);
+            WaitForSingleObject(hMutex, INFINITE);
 
-            bool written = false;
+            fstream file(filename, ios::binary | ios::in | ios::out);
+            Header h;
+            file.read(reinterpret_cast<char*>(&h), sizeof(h));
 
-            while (!written) {
-                file.clear();
-                file.seekg(0, ios::beg);
+            file.seekp(sizeof(Header) + h.tail * sizeof(Message));
+            Message msg;
+            memset(msg.text, 0, 21);
+            strcpy_s(msg.text, text.c_str());
+            file.write(reinterpret_cast<char*>(&msg), sizeof(Message));
 
-                for (int i = 0;; i++) {
-                    Message msg;
-                    file.read(reinterpret_cast<char*>(&msg), sizeof(Message));
+            h.tail = (h.tail + 1) % h.size;
+            file.seekp(0);
+            file.write(reinterpret_cast<char*>(&h), sizeof(h));
+            file.close();
 
-                    if (file.eof()) break;
-
-                    if (strlen(msg.text) == 0) {
-                        file.seekp(i * sizeof(Message), ios::beg);
-                        Message newMsg;
-                        strcpy_s(newMsg.text, text.c_str());
-                        file.write(reinterpret_cast<char*>(&newMsg), sizeof(Message));
-                        file.flush();
-                        cout << "Сообщение записано в ячейку #" << i << endl;
-                        written = true;
-                        break;
-                    }
-                }
-
-                if (!written) {
-                    cout << "Файл заполнен, ожидание освобождения...\n";
-                    Sleep(2000);
-                }
-            }
-        }
-        else {
-            cout << "Неверная команда.\n";
+            ReleaseMutex(hMutex);
+            ReleaseSemaphore(hFull, 1, NULL);
+            cout << "Сообщение отправлено." << endl;
         }
     }
 
-    file.close();
-    CloseHandle(readyEvent);
+    CloseHandle(hMutex);
+    CloseHandle(hFull);
+    CloseHandle(hEmpty);
+    CloseHandle(hReady);
     return 0;
 }

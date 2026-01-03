@@ -1,133 +1,98 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <vector>
 #include <windows.h>
-#include <algorithm>
+#include <vector>
+#include "Message.h"
 
 using namespace std;
-
-struct Message {
-    char text[21];
-};
 
 int main() {
     setlocale(LC_ALL, "Russian");
 
-    string binfile;
-    int n, m;
+    string filename;
+    int queueSize, senderCount;
 
-    cout << "Введите имя бинарного файла:" << endl;
-    cin >> binfile;
-    cout << "Введите количество записей в бинарном файле:" << endl;
-    cin >> n;
+    cout << "--- Receiver Process ---\n";
+    cout << "Введите имя бинарного файла: ";
+    cin >> filename;
+    cout << "Введите количество записей в очереди: ";
+    cin >> queueSize;
+    cout << "Введите количество процессов Sender: ";
+    cin >> senderCount;
 
-    
-    ofstream fout(binfile, ios::binary | ios::trunc);
-    if (!fout) {
-        cerr << "Ошибка создания бинарного файла!\n";
-        return 1;
+    {
+        ofstream fout(filename, ios::binary | ios::trunc);
+        Header h{ 0, 0, queueSize };
+        fout.write(reinterpret_cast<char*>(&h), sizeof(h));
+        Message empty = { "" };
+        for (int i = 0; i < queueSize; ++i)
+            fout.write(reinterpret_cast<char*>(&empty), sizeof(Message));
     }
 
-    Message empty = { "" };
-    for (int i = 0; i < n; i++)
-        fout.write(reinterpret_cast<char*>(&empty), sizeof(Message));
-    fout.close();
+    HANDLE hMutex = CreateMutex(NULL, FALSE, "FileMutex");
+    HANDLE hFull = CreateSemaphore(NULL, 0, queueSize, "MessagesFull");
+    HANDLE hEmpty = CreateSemaphore(NULL, queueSize, queueSize, "MessagesEmpty");
 
-    cout << "Введите количество процессов Sender:" << endl;
-    cin >> m;
+    vector<HANDLE> hReadyEvents(senderCount);
+    vector<PROCESS_INFORMATION> pi(senderCount);
 
-    
-    vector<HANDLE> senderEvents(m);
-    for (int i = 0; i < m; i++) {
-        string eventName = "SenderReady_" + to_string(i);
-        senderEvents[i] = CreateEventA(NULL, TRUE, FALSE, eventName.c_str());
-        if (!senderEvents[i]) {
-            cerr << "Ошибка создания события " << eventName << endl;
-            return 1;
-        }
-    }
+    for (int i = 0; i < senderCount; ++i) {
+        STARTUPINFO si = { sizeof(si) };
+        string cmd = "Sender.exe " + filename + " " + to_string(i);
 
-   
-    for (int i = 0; i < m; i++) {
-        string cmd = "Sender.exe " + binfile + " " + to_string(i);
-        wstring wCmd(cmd.begin(), cmd.end());
-
-        STARTUPINFOW si = { sizeof(si) };
-        PROCESS_INFORMATION pi;
-
-        if (!CreateProcessW(
-            NULL,
-            &wCmd[0],
-            NULL, NULL, FALSE,
-            0, NULL, NULL,
-            &si, &pi
-        )) {
-            cerr << "Ошибка запуска Sender процесса " << i << "\n";
-            return 1;
+        if (!CreateProcess(NULL, &cmd[0], NULL, NULL, FALSE,
+            CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi[i])) {
+            cout << "Ошибка запуска Sender #" << i << endl;
         }
 
-        CloseHandle(pi.hProcess);
-        CloseHandle(pi.hThread);
+        string eventName = "ReadyEvent" + to_string(i);
+        hReadyEvents[i] = CreateEvent(NULL, TRUE, FALSE, eventName.c_str());
     }
 
-    cout << "Ожидание готовности всех Sender...\n";
-    WaitForMultipleObjects(m, senderEvents.data(), TRUE, INFINITE);
-    cout << "Все Sender готовы!\n";
+    cout << "Ожидание готовности всех Sender-ов..." << endl;
+    WaitForMultipleObjects(senderCount, hReadyEvents.data(), TRUE, INFINITE);
+    cout << "Все Sender-ы запущены. Можно работать.\n";
 
-    
     while (true) {
-        cout << "\nКоманды:\n1 — прочитать сообщение\n2 — выход\n";
+        cout << "\n1 - Прочитать сообщение\n2 - Завершить работу\n> ";
         int cmd;
         cin >> cmd;
 
-        if (cmd == 2) {
-            cout << "Завершение работы Receiver.\n";
-            break;
-        }
-        else if (cmd == 1) {
-            ifstream fin(binfile, ios::binary);
-            if (!fin) {
-                cerr << "Ошибка открытия бинарного файла!\n";
-                continue;
-            }
+        if (cmd == 2) break;
+        if (cmd == 1) {
+            cout << "Ожидание сообщения из файла..." << endl;
 
+            WaitForSingleObject(hFull, INFINITE);
+            WaitForSingleObject(hMutex, INFINITE);
+
+            fstream file(filename, ios::binary | ios::in | ios::out);
+            Header h;
+            file.read(reinterpret_cast<char*>(&h), sizeof(h));
+
+            file.seekg(sizeof(Header) + h.head * sizeof(Message));
             Message msg;
-            bool found = false;
+            file.read(reinterpret_cast<char*>(&msg), sizeof(Message));
+            cout << "Получено сообщение: " << msg.text << endl;
 
-           
-            for (int i = 0; i < n; i++) {
-                fin.read(reinterpret_cast<char*>(&msg), sizeof(Message));
-                if (strlen(msg.text) > 0) {
-                    cout << "Прочитано сообщение: " << msg.text << endl;
-                    found = true;
+            h.head = (h.head + 1) % h.size;
+            file.seekp(0);
+            file.write(reinterpret_cast<char*>(&h), sizeof(h));
+            file.close();
 
-                    
-                    fin.close();
-                    fstream fmod(binfile, ios::binary | ios::in | ios::out);
-                    fmod.seekp(i * sizeof(Message));
-                    Message emptyMsg = { "" };
-                    fmod.write(reinterpret_cast<char*>(&emptyMsg), sizeof(Message));
-                    fmod.close();
-                    break;
-                }
-            }
-
-            if (!found) {
-                cout << "Файл пуст. Ожидание новых сообщений...\n";
-                Sleep(2000); 
-            }
-
-            fin.close();
-        }
-        else {
-            cout << "Неверная команда.\n";
+            ReleaseMutex(hMutex);
+            ReleaseSemaphore(hEmpty, 1, NULL);
         }
     }
 
-   
-    for (auto e : senderEvents)
-        CloseHandle(e);
+    for (int i = 0; i < senderCount; i++) {
+        CloseHandle(pi[i].hProcess);
+        CloseHandle(pi[i].hThread);
+        CloseHandle(hReadyEvents[i]);
+    }
+    CloseHandle(hMutex);
+    CloseHandle(hFull);
+    CloseHandle(hEmpty);
 
     return 0;
 }
