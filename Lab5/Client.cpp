@@ -5,15 +5,17 @@
 using namespace std;
 
 int main() {
+    setlocale(LC_ALL, "rus");
     HANDLE hPipe = CreateFileA("\\\\.\\pipe\\WorkPipe", GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
 
     if (hPipe == INVALID_HANDLE_VALUE) {
-        cerr << "Connection to pipe failed." << endl;
+        cerr << "Не удалось подключиться к каналу." << endl;
+        system("pause");
         return 1;
     }
 
     while (true) {
-        cout << "\n1. Read record\n2. Modify record\n3. Exit\nChoice: ";
+        cout << "\n1. Чтение записи\n2. Модификация записи\n3. Выход\nВыбор: ";
         int choice; cin >> choice;
 
         Request req;
@@ -24,7 +26,7 @@ int main() {
             break;
         }
 
-        cout << "Enter Employee ID: ";
+        cout << "Введите ID сотрудника: ";
         cin >> req.id;
         req.op = (choice == 1) ? READ : MODIFY;
 
@@ -33,25 +35,25 @@ int main() {
         ReadFile(hPipe, &req, sizeof(Request), &transferred, NULL);
 
         if (req.id == -1) {
-            cout << "Employee not found!" << endl;
+            cout << "Сотрудник не найден!" << endl;
             continue;
         }
 
-        cout << "Data: ID=" << req.data.num << ", Name=" << req.data.name << ", Hours=" << req.data.hours << endl;
+        cout << "Найдено: ID=" << req.data.num << ", Имя=" << req.data.name << ", Часы=" << req.data.hours << endl;
 
         if (choice == 2) {
-            cout << "Enter new Name and Hours: ";
-            cin >> req.data.name >> req.data.hours;
+            cout << "Введите новое имя: "; cin >> req.data.name;
+            cout << "Введите новые часы: "; cin >> req.data.hours;
             req.op = SAVE;
 
-            cout << "Press any key to send update to server..." << endl;
+            cout << "Нажмите ENTER для отправки изменений..." << endl;
             system("pause");
 
             WriteFile(hPipe, &req, sizeof(Request), &transferred, NULL);
-            cout << "Update sent." << endl;
+            cout << "Данные обновлены на сервере." << endl;
         }
         else {
-            cout << "Press any key to finish reading..." << endl;
+            cout << "Просмотр завершен. Нажмите любую клавишу..." << endl;
             system("pause");
         }
     }

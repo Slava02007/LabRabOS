@@ -1,8 +1,8 @@
 #pragma once
 struct employee {
-    int num;         
-    char name[10];   
-    double hours;    
+    int num;
+    char name[10];
+    double hours;
 };
 
 enum Operation { READ, MODIFY, SAVE, EXIT };
