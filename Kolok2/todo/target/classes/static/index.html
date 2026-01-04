@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>To-Do List API Client</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
+        .task-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px; }
+        input, textarea { padding: 8px; }
+        button { cursor: pointer; padding: 10px; background: #28a745; color: white; border: none; }
+        .task-item { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 5px; }
+        .task-item.done { background-color: #f8f9fa; opacity: 0.7; }
+        .controls { margin-top: 10px; }
+        .delete-btn { background: #dc3545; }
+    </style>
+</head>
+<body>
+
+<h1>Мои задачи</h1>
+
+<div class="task-form">
+    <input type="text" id="title" placeholder="Название задачи" required>
+    <textarea id="description" placeholder="Описание"></textarea>
+    <button onclick="createTask()">Добавить задачу</button>
+</div>
+
+<div id="taskList"></div>
+
+<script>
+    const API_URL = '/tasks';
+
+    async function loadTasks() {
+        const response = await fetch(API_URL);
+        const tasks = await response.json();
+        const listDiv = document.getElementById('taskList');
+        listDiv.innerHTML = '';
+
+        tasks.forEach(task => {
+            const taskEl = document.createElement('div');
+            taskEl.className = `task-item ${task.status === 'done' ? 'done' : ''}`;
+            taskEl.innerHTML = `
+                <strong>${task.title}</strong> [${task.status}]
+                <p>${task.description || ''}</p>
+                <div class="controls">
+                    ${task.status !== 'done' ? `<button onclick="updateStatus(${task.id}, 'done')">Завершить</button>` : ''}
+                    <button class="delete-btn" onclick="deleteTask(${task.id})">Удалить</button>
+                </div>
+            `;
+            listDiv.appendChild(taskEl);
+        });
+    }
+
+    async function createTask() {
+        const title = document.getElementById('title').value;
+        const description = document.getElementById('description').value;
+
+        if (!title) return alert("Введите название");
+
+        await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, description, status: 'todo' })
+        });
+
+        document.getElementById('title').value = '';
+        document.getElementById('description').value = '';
+        loadTasks();
+    }
+
+    async function updateStatus(id, newStatus) {
+        await fetch(`${API_URL}/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+        });
+        loadTasks();
+    }
+
+    async function deleteTask(id) {
+        if (confirm("Удалить задачу?")) {
+            await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            loadTasks();
+        }
+    }
+
+    loadTasks();
+</script>
+</body>
+</html>
